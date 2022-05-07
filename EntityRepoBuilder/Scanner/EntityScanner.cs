@@ -1,5 +1,6 @@
 ﻿using EntityRepoBuilder.Scanner.Attributes.Literals;
 using EntityRepoBuilder.Scanner.Constants;
+using EntityRepoBuilder.Scanner.Objects;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -11,21 +12,22 @@ namespace EntityRepoBuilder.Scanner
 {
     public static class EntityScanner
     {
-        public static void Scan(this object Entity)
+        public static TableTarget Scan(this object Entity)
         {
-            ScanEntity(Entity.GetType());
+            return ScanEntity(Entity.GetType());
         }
-        public static void ScanEntity(Type Entity)
+        public static TableTarget ScanEntity(Type Entity)
         {
-            Entity._ProcessEntity();
-            var deeb = Entity;
-
+            return Entity._ProcessEntity();
         }
 
-        private static void _ProcessEntity(this Type Entity)
+        private static TableTarget _ProcessEntity(this Type Entity)
         {
-            var tableMeta = TableScanner._getAttributes(Entity)._categorize();
-            var properties = PropertyScanner._getProperties(Entity)._categorize();
+            var table = new TableTarget();
+
+            table.Meta = TableScanner._getAttributes(Entity)._buildMeta();
+            table.Properties = PropertyScanner._getProperties(Entity)._categorize(table.Meta.WhiteList);
+            return table;
         }
     }
 }

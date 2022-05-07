@@ -6,12 +6,15 @@ using System.Threading.Tasks;
 
 namespace EntityRepoBuilder.Scanner.Constants
 {
-    internal static class TableMeta
+    public static class TableMeta
     {
         public enum Enum
         {
             TableTarget,
-            WhiteList
+            WhiteList,
+            Destroyable,
+            CamelCase,
+            SnakeCase
         }
     }
 }

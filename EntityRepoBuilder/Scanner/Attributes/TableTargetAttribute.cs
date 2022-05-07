@@ -10,7 +10,7 @@ namespace EntityRepoBuilder.Scanner.Attributes
     {
         public string TableName { get; set; }
         public string TableAlias { get; set; }
-        public TableTargetAttribute(string destTable, string alias = "")
+        public TableTargetAttribute(string destTable, string alias)
         {
             (TableName, TableAlias) = (destTable, alias);
         }

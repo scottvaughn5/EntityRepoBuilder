@@ -11,36 +11,46 @@ namespace EntityRepoBuilder.Scanner
 {
     internal static class PropertyScanner
     {
-        internal static Dictionary<PropertyMeta.Enum, List<PropertyInfo>> _categorize(this IList<PropertyInfo> properties)
+        internal static Dictionary<PropertyMeta.Enum, List<PropertyInfo>> _categorize(this IList<PropertyInfo> properties, bool whiteList = false)
         {
             var sortedProps = new Dictionary<PropertyMeta.Enum, List<PropertyInfo>>();
             foreach (PropertyInfo property in properties)
             {
                 sortedProps._assignCategory(property);
             }
+            return sortedProps._mergeReadTypes();
+        }
+
+        private static Dictionary<PropertyMeta.Enum, List<PropertyInfo>> _mergeReadTypes(this Dictionary<PropertyMeta.Enum, List<PropertyInfo>> sortedProps)
+        {
+            if (sortedProps.ContainsKey(PropertyMeta.Enum.ReadOnly) && sortedProps.ContainsKey(PropertyMeta.Enum.Read))
+            {
+                sortedProps[PropertyMeta.Enum.Read] = sortedProps[PropertyMeta.Enum.ReadOnly].Concat(sortedProps[PropertyMeta.Enum.Read]).ToList();
+            }
             return sortedProps;
         }
 
-        private static Dictionary<PropertyMeta.Enum, List<PropertyInfo>> _assignCategory(this Dictionary<PropertyMeta.Enum, List<PropertyInfo>> sortedProps, PropertyInfo currentProp)
+        private static Dictionary<PropertyMeta.Enum, List<PropertyInfo>> _assignCategory(this Dictionary<PropertyMeta.Enum, List<PropertyInfo>> sortedProps, PropertyInfo currentProp, bool whiteList=false)
         {
-            bool isAssignedViaCustomAttrib = false;
+            var addedViaCustom = new HashSet<PropertyMeta.Enum>();
             // scan the properties for any custom attributes registered for the scanner
             if (currentProp.CustomAttributes.Any())
             {
                 foreach (var attribute in currentProp.CustomAttributes)
                 {
                     PropertyMeta.Enum attributeMappedDest;
-                    if (CustomAttributeNames.Map.TryGetValue(attribute.AttributeType.Name, out attributeMappedDest))
+                    if (CustomAttributeNames.PropMap.TryGetValue(attribute.AttributeType.Name, out attributeMappedDest))
                     {
                         sortedProps._assignPropToType(attributeMappedDest, currentProp);
-                        isAssignedViaCustomAttrib = true;
+                        addedViaCustom.Add(attributeMappedDest);
                     }
                 }
             }
             // if no custom attribute is assigned to a property then we default it to CRUD
-            if (!isAssignedViaCustomAttrib)
+            if (!whiteList && 
+                !(addedViaCustom.Contains(PropertyMeta.Enum.ReadOnly) || addedViaCustom.Contains(PropertyMeta.Enum.Dependent)))
             {
-                sortedProps._assignPropToType(PropertyMeta.Enum.CRUD, currentProp);
+                sortedProps._assignCRU(currentProp);
             }
             return sortedProps;
         }
@@ -73,6 +83,14 @@ namespace EntityRepoBuilder.Scanner
         internal static IList<PropertyInfo> _getProperties(this Type Entity)
         {
             return new List<PropertyInfo>(Entity.GetProperties());
+        }
+
+        private static Dictionary<PropertyMeta.Enum, List<PropertyInfo>> _assignCRU(this Dictionary<PropertyMeta.Enum, List<PropertyInfo>> sortedProps, PropertyInfo currentProp)
+        {
+            sortedProps._assignPropToType(PropertyMeta.Enum.Create, currentProp);
+            sortedProps._assignPropToType(PropertyMeta.Enum.Read, currentProp);
+            sortedProps._assignPropToType(PropertyMeta.Enum.Update, currentProp);
+            return sortedProps;
         }
     }
 }
